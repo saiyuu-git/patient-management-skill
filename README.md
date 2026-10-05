@@ -1,40 +1,96 @@
-# Patient Management
+# Patient Management Skill
 
-A single, specialty-agnostic Skill with a deterministic local engine and mobile-first dashboard. The host agent extracts and reasons through structured task packages; code validates, persists, computes and renders. No vendor API integration or API keys.
+一个面向临床医生的本地患者管理与临床信息整合 Skill。
 
-## Local setup
+Patient Management 用于帮助医生整理分散的患者资料，更方便地了解患者当前情况、近期变化以及仍需处理的事项。
 
-Python 3.11 minimum; 3.12 recommended. No runtime dependencies or pip installation required.
+在日常查房中，患者信息往往分散在入院记录、病程记录、检验结果、检查报告和治疗计划中。为了快速掌握一个患者的情况，医生常常需要反复翻阅不同资料，再自行整理其中的重要信息。
 
-Unpack the source bundle into a folder named `patient-management`. Keep the complete folder together: `schemas/` and `knowledge/` are runtime resources beside `src/`. Register that folder as a local Skill using your host's supported mechanism; consult its own instructions for discovery paths. The host must support local commands/files; web access and vision are optional. Only one `SKILL.md` is exposed.
+Patient Management 希望减少这部分重复工作，将与患者当前病情相关的信息集中整理，使医生能够更快了解：
 
-From the unpacked folder, substituting a private database path:
+- 患者目前的主要情况；
+- 和此前相比发生了哪些变化；
+- 哪些检验或检查值得关注；
+- 当前还有哪些问题需要继续观察或处理；
+- 有哪些已经明确或待确认的事项。
 
-```sh
-python3 scripts/pm.py --db /absolute/private/path/pm.sqlite init
-python3 scripts/pm.py --db /absolute/private/path/pm.sqlite patient create --id pt_demo --alias Demo
-python3 scripts/pm.py --db /absolute/private/path/pm.sqlite prepare ingest pt_demo /absolute/private/path/note.txt
-python3 scripts/pm.py --db /absolute/private/path/pm.sqlite serve --port 8765
-```
+除患者信息整理外，系统还可以结合当前患者情况提供辅助分析和个性化知识补充，帮助医生进一步理解值得关注的临床问题。
 
-Open `http://127.0.0.1:8765/patient/pt_demo`. Keep the service in a terminal or a host-supported background process. Closing it does not delete data; restart with the same database. This version does not install an OS daemon. Loopback access is restricted to the same machine; a phone cannot reach another computer through its own `127.0.0.1`. Remote/mobile deployment is not configured here.
+这个项目的目标不是替代医生进行诊断和治疗决策，也不是生成更多、更长的医学文字，而是希望让患者信息更清楚，让查房和日常患者管理更简单一些。
 
-Do not install a wheel as the supported delivery method yet: resource paths currently assume the complete source bundle. [SKILL.md](SKILL.md) describes the host workflow and retry/fallback handling. Clinical analysis and optional knowledge generation are explicit host steps, never page-render side effects.
+> Patient Management 是临床信息整理和辅助分析工具。AI 分析、候选诊断、建议及知识补充均需要由医疗专业人员结合真实患者情况核实，不能替代临床判断和医疗决策。
 
-## Privacy and medical boundaries
+## 隐私说明
 
-Users must de-identify submitted material as required by institutional policy and applicable law before providing it to an agent/model/project, and remain responsible for privacy, security and compliance. The project does not anonymize records or assume that responsibility. It is a clinician support tool, not an autonomous diagnostic or prescribing system. Local files and SQLite are not encrypted by this engine; protect access and backups yourself.
+### 本项目不自动脱敏
 
-See [privacy/input](docs/privacy-and-input.md) and [medical evidence sources](docs/evidence-source-policy.md). Searches disclose only clinical concepts. No textbooks are required or shipped. Scans/images require faithful host transcription; no built-in OCR.
+Patient Management 不会自动删除、替换或匿名化用户提供的患者资料。
 
-## Local bundle
+用户提交的内容可能包含：
 
-In the source workspace, use a suitable Python interpreter:
+- 患者姓名；
+- 床号；
+- 病历号、病案号；
+- 电话等联系方式；
+- 医师姓名；
+- 其他身份标识或医疗信息。
 
-```sh
-python3 scripts/build_skill.py /absolute/output/path/patient-management.zip
-```
+这些资料会按照用户提供的内容进行处理。对于患者管理有用的信息，例如姓名、床号等，也可以正常用于患者信息展示。
 
-The ZIP builder uses explicit public files/directories and does not traverse private reference/runtime folders. Symlinks are rejected; an existing output archive is never overwritten. `MANIFEST.json` contains per-file SHA-256 hashes. Review the manifest before sharing: inclusion safety does not automatically establish content licensing or clinical accuracy. Test files, fictional fixtures and patient data are not included in this public snapshot. Automated checks do not certify real-model clinical quality.
+自动脱敏不是 Patient Management 当前承担的功能。项目不会为了脱敏额外调用模型，也不会主动修改用户提供的原始医疗资料。
 
-No public repository or release is created by these commands. The project is licensed under [Apache License 2.0](LICENSE).
+### 使用者自行负责脱敏与合规
+
+在向 AI Agent、模型服务或本项目提交真实患者资料之前，使用者应根据：
+
+- 所在医疗机构的管理要求；
+- 患者隐私和数据安全要求；
+- 所在地区适用的法律法规；
+- 所使用 AI / 模型服务的数据处理政策；
+
+自行判断是否需要进行脱敏、去标识化或采取其他数据保护措施。
+
+**患者资料是否适合提交给某个 Agent 或模型服务，由使用者自行判断并承担相应的隐私、合规和数据治理责任。**
+
+Patient Management 不能替代医疗机构自身的信息安全、伦理审查和数据治理流程。
+
+### 本地保存不等于不会经过第三方模型服务
+
+即使患者数据最终保存在本地，用户提交给宿主 Agent 的原始资料仍可能由该 Agent 所使用的模型服务处理。
+
+因此，在处理真实患者资料前，应了解并确认相关服务的数据使用和隐私政策，并自行保护：
+
+- 患者原始文件；
+- Patient Management 数据库；
+- Agent 工作目录；
+- 本地备份；
+- 其他包含患者信息的文件。
+
+### 联网检索采用最小披露原则
+
+Patient Management 在需要补充外部医学知识时，可以由宿主 Agent 进行联网检索。
+
+联网查询应尽量避免包含不必要的：
+
+- 患者姓名；
+- 床号；
+- 病历号；
+- 电话；
+- 精确患者日期；
+- 具体患者数值；
+- 其他身份标识信息。
+
+外部搜索应尽量使用抽象后的医学问题，而不是直接携带患者身份信息。
+
+### 公开仓库不包含真实患者资料
+
+公开发布的项目仓库不应包含：
+
+- 真实患者资料；
+- 患者数据库；
+- 本地工作数据；
+- 测试患者原始资料；
+- 原始医学教材；
+- 其他包含患者隐私的信息。
+
+开发和测试过程中使用的真实患者资料应始终保留在本地私有目录中，不提交至公开仓库。
