@@ -1,6 +1,6 @@
 # Model Compatibility, Validator, Fallback v0.2
 
-Goal: every model reaches a stable minimum quality. Stronger models write better analysis; weaker models never break the page or fabricate facts.
+Design goal: a stable minimum workflow across models, with per-module failure containment. Automated checks with simulated outputs are not clinical certification; real-model quality and mobile-agent compatibility remain unverified. Validators reduce risk but cannot guarantee factual or clinical correctness.
 
 ## 1. Assumed failure modes
 
@@ -11,12 +11,12 @@ Invalid JSON or prose/fences around it; missing/extra fields; wrong or localized
 | Technique | Rule |
 |---|---|
 | One module per call | Never one giant JSON |
-| Flat schema | Nesting ≤2, ≤8 fields per object, ≤8 enum values |
+| Simple schema | Prefer small objects and shallow nesting; exact limits come from schemas/, not a universal field count |
 | Bounded lists | Every array has `maxItems` |
 | Precomputed facts | Metrics, flags, ordering, dates, units are given; model interprets |
 | Compact fact lines | `[fact_id] name value unit time flag`; model returns IDs |
 | Selected context | Only relevant facts and ≤3 validated external sources per question, budget-truncated |
-| One packet template | Instructions + rule list + input + schema + 1 minimal example; identical for all models |
+| Model-neutral packets | Module-specific instructions + selected input + schema; examples only where provided; no vendor-specific format |
 | Honest abstention | `status=insufficient_information` is valid |
 | Low temperature | ≤0.3 when the host allows |
 
@@ -53,11 +53,11 @@ Levels: **R** reject module → repair/retry. **D** drop offending item, keep th
 | V14 | Extraction: admission date quote not from admission record or explicit user statement | D |
 | V15 | Zero valid items while `status=ok` | R |
 | V17 | Extraction: hedged wording (考虑/可能/待排/不除外/?) submitted as a stated diagnosis | D |
-| V18 | Extraction: `assertion=present` while the quote carries a negation/uncertainty cue | D |
+| V18 | Extraction: any model assertion conflicts with reliably determined source wording; no upgrades or downgrades | D |
 | V19 | Extraction: lab already captured by the deterministic parser (skipped, not an error) | — |
 | V16 | `change_significance ≠ uncertain` with `certainty=likely` but no `external_refs` → downgrade certainty to `possible` | W |
 
-V05/V07/V08 v1 = rules + word lists; prefer false rejects over false accepts.
+V05/V07/V08 v1 = rules + word lists, not semantic proof. For extraction, reliable source cues own assertion; unclear negation scope stays `unknown`. A "more conservative" assertion is not accepted if it changes the source meaning.
 
 ## 5. Retry state machine
 
@@ -71,31 +71,34 @@ attempt 1 → parse → validate ──R/V15──▶ attempt 2 (repair: packet 
 
 ## 6. Conservative fallback
 
-Always shown regardless of model modules: header facts; locked user diagnoses; real lab values, flags, objective series metrics and charts; investigation findings and verbatim impressions; explicit tasks; rule-based focus items.
+Available regardless of model modules: header facts, locked user diagnoses, objective labs/trends, investigation facts and explicit tasks. Fixed presentation rules still select visible examinations. Today Focus and Problem List remain internal, not standalone dashboard cards.
 
 | Module | Fallback |
 |---|---|
-| patient_summary | Code template: label, sex, age, user diagnoses (or `诊断：待补充`). No judgment. |
+| patient_summary | Code template: sex, age and supplied diagnoses (or `待补充`). Header remains separate. No judgment. |
 | diagnosis_candidates | Candidate area hidden. Track A unaffected. |
 | lab_interpretation | Data + metrics unchanged; analysis area `暂无可靠分析` |
 | investigation_analysis | Findings + impression unchanged; analysis `暂无可靠分析` |
-| problem_list | If user diagnoses exist, titles from verbatim diagnoses without assessment; else `暂无可靠分析` |
-| clinical_assessment | `暂无可靠分析`; focus shows rule items only |
+| problem_list | No generated assessment; user diagnoses remain available separately |
+| clinical_assessment | `暂无可靠分析`; objective data remains available |
 | task_suggestions | AI suggestion area hidden |
-| handover_summary | Code SBAR template from facts only (header, user dx, abnormal labs with metrics, new impressions, open explicit tasks); analysis lines `暂无可靠分析` |
+| today_focus | Code-selected existing events/tasks; internal output, not a standalone card |
+| handover_summary | Fixed fields from demographics/admission date, chief complaint, selected lab trends, supplied diagnoses and code-selected focus; no inferential assessment |
+| knowledge_supplement | Empty output; no unsupported medical knowledge is invented |
 
 Templates restate existing facts only; no inferential wording.
 
-## 7. Optional run profile
+## 7. Module selection
 
-`model_profile` selects modules only; schemas and UI unchanged. `standard` = all. `basic` = extraction + lab_interpretation + investigation_analysis; others use fallback templates. Set by user/host config, never by model name.
+The host selects modules required by the authorized workflow and invokes fallback where necessary. No `model_profile` CLI switch or automatic model-specific profile is implemented. Selection never changes schemas or UI structure.
 
 ## 8. Cross-model regression
 
 - Fictional multi-specialty golden cases with expected facts, metrics, and a must-not-appear list.
 - Metrics: parse rate, module pass rate, item drop rate, V05/V07 hits, fallback rate, render crashes.
-- **Floor:** zero crashes, zero fabricated facts displayed, 100% of reliable data displayed.
+- **Target:** no module failure breaks the page, no unsupported facts are accepted, reliable data stays available. This is an acceptance goal, not a guarantee of clinical correctness or exhaustive display.
 - Adversarial fixtures (broken JSON, fake IDs, HTML injection, dose orders) test validator + frontend without any real model.
+- Tests and fictional fixtures are local-only and are not included in the public repository snapshot.
 
 ## 9. External evidence bundle validator (`evidence.py`)
 
@@ -116,6 +119,9 @@ Templates restate existing facts only; no inferential wording.
 | E13 | Declared tier differs from code tier (tier follows source_type) | code wins |
 | E14 | Duplicate URL | drop duplicate |
 | E15 | No source survived | repair (1×) then failed |
+| E16 | Content not accessed/verified (`snippet_only` or missing verification) | unverified_candidate only; never citable external evidence |
+
+Source access and claim grounding are host responsibilities; code checks supplied verification metadata and references, not independent page entailment.
 
 ## 10. Analysis validator additions (`analysis.py`)
 
@@ -132,3 +138,13 @@ Templates restate existing facts only; no inferential wording.
 | V24 | Investigation item without its investigation/finding ids | drop item |
 | V25 | Today Focus item not from a code candidate, or evidence outside it | drop item |
 | V26 | AI suggestion duplicates an explicit task | drop item |
+
+## 11. Knowledge Supplement
+
+`schemas/knowledge-supplement.schema.json` limits output to 0–3 patient-linked insights, with title, why_relevant,
+knowledge, clinical_connection, patient evidence_ids, verified external_refs and uncertainty. Facts describe this
+patient; medical sources describe general knowledge. Neither may substitute for the other.
+
+Code checks schema, known patient references, linked fresh page-verified sources and basic unsafe-text patterns.
+The host must check relevance, claim grounding, duplication, uncertainty and unsupported causality before submission;
+ID validation alone does not establish clinical correctness. One repair, then an empty result on failure.

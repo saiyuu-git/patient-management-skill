@@ -1,10 +1,12 @@
 # Dashboard Spec v0.3
 
+Purpose: help clinicians review current patient information, recent changes and outstanding tasks during ward rounds. The page presents saved content; viewing, refreshing or changing layout never invokes clinical analysis.
+
 Knowledge Supplement targets physicians: at most three high-value patient-linked clinical insights, not disease introductions or another overview. Host output is `knowledge_items` with title, why_relevant, knowledge, clinical_connection, patient evidence_ids, verified external_refs, and uncertainty (low/moderate/high). Fixed labels: `为何值得关注 / 临床要点 / 联系本例 / 不确定性`. Empty output is valid. Preserve patient facts vs general medical knowledge; never convert associations into patient-specific causes.
 
 Sidebar icons share one blue filter and centered 24px slots; text is vertically centered in the same slots. The overview main heading has no icon. Source links use `来源` without tier badges (tiers remain internal validation metadata). Chart points show a compact rounded-border tooltip following the pointer; pointer exit hides it. Touch clicks show it temporarily (2.5s), outside click/scroll/Escape dismiss it. Keyboard Enter also displays it; blur dismisses it. Keyboard focus uses a circular stroke, not a rectangular enlargement.
 
-Host education is accepted by `education.submit`, persisted in `analysis_records` as `knowledge_supplement`, and projected through the fixed view. Each entry links patient evidence and fresh, page-verified medical sources. Invalidated/stale/unrelated sources hide the entry. Semantic paraphrase grounding remains host-reviewed, not proven by ID validation. No render-time search/model calls. The overview icon uses one fixed SVG silhouette (circle head and rounded shoulders), not separately positioned CSS pieces.
+Host knowledge output is accepted by `education.submit`, persisted in `analysis_records` as `knowledge_supplement`, and projected through the fixed view. Each entry links patient evidence and fresh, page-verified medical sources. Invalidated/stale/unrelated sources hide the entry. Semantic paraphrase grounding remains host-reviewed, not proven by ID validation. No render-time search/model calls. The overview icon uses one fixed outline SVG (circle head and rounded shoulders, no fill), not separately positioned CSS pieces.
 
 Renderer input is only the Dashboard View Model. Presentation changes never trigger extraction, web search or reasoning.
 

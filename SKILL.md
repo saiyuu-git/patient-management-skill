@@ -1,15 +1,15 @@
 ---
 name: patient-management
-description: Maintain longitudinal patient records, constrained clinical analyses, and a persistent local clinical dashboard from supplied notes, results and plans. Use for patient-management workflows across clinical specialties, not standalone medical questions without a patient record.
+description: Support clinical ward rounds by organizing patient records, reviewing changes, and tracking tasks in a persistent local dashboard. Use for ongoing patient-management workflows across specialties, not standalone medical questions without a patient record.
 ---
 
 # Patient Management
 
-One Skill; the host agent performs extraction and bounded reasoning. The engine owns state, calculations, validation and UI. Do not generate a replacement webpage or edit SQLite directly.
+Help clinicians review the patient's current condition, changes and outstanding tasks with less repeated information gathering. One Skill; the host agent performs extraction and bounded reasoning. The engine owns state, calculations, validation and UI. Do not generate a replacement webpage or edit SQLite directly.
 
 ## Start
 
-Resolve this Skill's root. Use Python >=3.11 (3.12 recommended). Run commands as:
+Load the complete project folder through the host's supported Skill mechanism; SKILL.md alone is insufficient. Keep src/, schemas/ and knowledge/ together. Resolve this Skill's root. Use Python >=3.11 (3.12 recommended). Run commands as:
 
 ```sh
 python3 /absolute/skill/root/scripts/pm.py --db /absolute/private/path/pm.sqlite COMMAND
@@ -44,8 +44,10 @@ Start `pm serve --port 8765` using the host's supported long-lived local process
 
 Open `http://127.0.0.1:8765/patient/<patient_id>`. Check `/api/health` before starting a second process; confirm it uses the intended DB rather than assuming any service on that port is this patient's service. Browser refresh never invokes a model. SQLite survives service/session shutdown; the web process itself is not guaranteed to.
 
+Loopback serves only the device running the engine, not another device. Responsive mobile UI does not establish mobile-agent compatibility: Operit installation and Android background persistence have not been verified. Report actual environment checks, not assumed support.
+
 Use `pm dashboard <patient_id>` for the fixed frontend contract. Never replace UI with model-authored HTML/CSS/JS. User-approved diagnosis/task changes use existing `dx`/`tasks` commands, not direct SQL. Do not mark `possible_completed` hints completed without confirmation.
 
 ## Boundaries
 
-No API keys, direct model/search API bindings, textbooks, bundled medical knowledge, cloud sync, automatic de-identification or autonomous medical orders. Final clinical judgment belongs to clinicians. Do not publish patient files, caches, work packets or local development configuration. See [setup and verification](README.md) for local use and packaging.
+The engine manages no API keys and has no direct model/search API bindings, textbooks, bundled medical knowledge, cloud sync, automatic de-identification or autonomous medical orders. The host may use a third-party model service; local persistence does not mean local-only processing. Final clinical judgment belongs to clinicians. Do not publish patient files, caches, work packets or local development configuration. See [project introduction and privacy](README.md); setup requirements and commands are above.

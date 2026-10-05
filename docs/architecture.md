@@ -2,6 +2,8 @@
 
 Data contracts: `schemas/` (single source of truth). Model protocol: `docs/model-compatibility.md`. UI: `docs/dashboard-spec.md`.
 
+Purpose: reduce repeated information gathering during ward rounds by bringing the patient's current condition, changes and outstanding tasks into one local view. Clinical analysis and patient-linked knowledge support clinician review; they do not replace clinical decisions.
+
 ## 0. Principles
 
 1. **One Skill.** Ships as a single Skill, `patient-management`. Internally modular; never split into user-selected Skills.
@@ -38,10 +40,11 @@ The **host agent running the Skill is the model**. The engine is vendor-neutral,
 
 ```
 host agent                          engine (code)
-  pm prepare <module>   ──────▶  task packet: instructions + selected facts + validated external evidence + output schema + 1 example
+  pm analysis prepare <pid> <module> ─▶ task packet: selected context + instructions + schema
   fill JSON
-  pm submit <module> <file> ───▶  parse → validate → accept | error list (for repair) | fallback
-  pm render             ──────▶  view model + fixed frontend
+  pm analysis submit <package> <output> ─▶ validate → accept | repair | fallback
+  pm dashboard <pid>    ──────▶  Dashboard View JSON
+  pm serve --port 8765  ──────▶  fixed web dashboard
 ```
 
 Optional future extension (not in v1): a direct-API adapter implementing `complete(prompt) -> text`. No other layer may depend on it. Native function calling / JSON mode are optional enhancements, never prerequisites.
@@ -57,9 +60,9 @@ Runtime: Python ≥ 3.11 (3.12 recommended). Core engine stdlib-first.
 5. **Analyze** modules in dependency order (§9); each validated and failing independently.
 6. **Render.**
 
-Incremental: new sources rerun 1–4 incrementally; modules whose `input_hash` changed become `stale` and rerun; stale output stays visible with a "pending refresh" marker.
+Incremental ingestion updates facts and computed trends. Clinical re-analysis is a separate, authorized host step; ingestion and browser refresh do not automatically rerun models. Task packages record `input_hash`; the view supports a `stale` marker, but v1 does not automatically invalidate or schedule every affected analysis.
 
-## 4. Patient State (v0.2)
+## 4. Patient State (v0.6)
 
 See `schemas/patient-state.schema.json`.
 
@@ -83,7 +86,7 @@ Invariants:
 ## 5. Evidence IDs
 
 - Citable objects use `fact_<kind>_<slug>_<seq>`: `fact_lab_cr_001`, `fact_series_cr`, `fact_inv_001`, `fact_invf_001_02`, `fact_symptom_003`.
-- IDs are immutable. Corrections set `superseded_by`; nothing is deleted.
+- Patient evidence IDs remain stable; corrections retain provenance and audit history. Unreviewed model candidates and suggestions may be replaced on an authorized analysis refresh (§9c).
 - Every model claim carries `evidence_ids` (≥1). Validator checks each ID exists in the task packet.
 - External medical evidence is cited separately via `external_refs` (`ext_*`), never mixed with patient `evidence_ids`.
 - Packets list facts compactly, e.g. `[fact_lab_cr_001] 肌酐 156 μmol/L 2026-10-03T06:00 high`. Models cite IDs, never copy data.
@@ -113,7 +116,7 @@ Invariants:
 ### 6.3 Labs
 
 - **Normalization:** code conversion table; failure → `normalized_value=null`, point excluded from series.
-- **Abnormal flag:** report flag first (`abnormal_flag_source=report`), else from reference range. Critical thresholds come from a code-maintained per-analyte table.
+- **Abnormal flag:** report flag first (`abnormal_flag_source=report`), else from reference range. The critical-threshold table is currently empty: critical flags come from reports, not inferred thresholds.
 - **Series:** same `test_id`, comparable unit, numeric. `data_status`: `sufficient` (≥2 points) / `insufficient` (≤1) / `not_comparable`.
 - **Objective metrics only** (no global % threshold, no clinical-significance judgment in code):
 
@@ -183,6 +186,7 @@ No specialty content is bundled; evidence questions work for any specialty. The 
 | 3 | problem_list | dx + validated outputs of 2 + facts | analyses |
 | 4 | clinical_assessment | problem list + key facts | analyses (incl. focus_points) |
 | 4 | patient_summary | key facts + dx | analyses |
+| 4 | today_focus | code-selected focus candidates | analyses (internal; not a standalone card) |
 | 5 | task_suggestions | problem list + existing tasks | tasks (ai_suggestion) |
 | 5 | handover_summary | all validated outputs | analyses |
 
@@ -201,7 +205,7 @@ pm submit <package> <output>      parse → normalize → per-item schema filter
 - **Chunking** (`textparse.chunk`): split at document/section headings; pack whole lines up to `max_chars`; never split runs of lab lines, numbered lists, or markdown tables; an overlong line splits at sentence ends. Chunks keep `chunk_id`, line range, char range, `doc_kind`.
 - **Parser first**: known-analyte lab lines (with an explicit collection time on the line, a lab-block header, or `--date`), `姓名/性别/年龄/床号` fields, explicit admission-date statements, numbered/semicolon diagnosis lists. Ambiguous lines are left to the model; parser-captured lab lines are listed in the package and model duplicates are skipped (V19).
 - **Anchoring**: quote must be inside the task's chunks; text, values, units, reference, flag must be inside the quote; times must appear in the chunk. Stored items carry `source_ref.span`.
-- **Assertion**: `present | absent | uncertain` from explicit cues (`textparse.expected_assertion`). A model claiming `present` against a cue is rejected (V18). Hedged diagnoses become `impression` facts (V17).
+- **Assertion**: reliable source wording determines `present | absent | uncertain` (`textparse.assertion_evidence`). Any conflicting model assertion is rejected (V18), including a downgrade of an affirmative statement. Unclear scope is stored as `unknown`; hedged diagnoses remain `impression` facts (V17), not locked diagnoses.
 - **Admission date**: explicit statement (入院日期/入院时间/`<date>入院`) or a quote from an admission record. Note/lab dates never.
 
 ## 9c. Clinical analysis engine (implemented: `analysis.py`)
@@ -232,7 +236,7 @@ The fourth presentation section, Knowledge Supplement, displays separately submi
 
 ## 10. Storage and conflicts (implemented in `src/patient_management/`)
 
-- SQLite (stdlib `sqlite3`), one DB for all patients; every row keyed by `(patient_id, id)`, payload = schema-shaped JSON. Migrations via `PRAGMA user_version`; every mutation runs in one transaction.
+- SQLite (stdlib `sqlite3`), one DB can hold multiple patients; patient entities are scoped by patient_id, while external evidence cache entries are global and patient-free. Entity payloads are schema-shaped JSON. Migrations use `PRAGMA user_version`; state writes are transactional.
 - Raw source text in `source_texts`, never in state. `events` keeps an append-only audit of entity writes.
 - Duplicate sources: SHA-256 fingerprint of (kind, whitespace-squashed text), or (kind, extraction) without text; `UNIQUE(patient_id, fingerprint)`; duplicates logged in `ingest_log`.
 - Conflicts (`lab_value_mismatch`, `locked_diagnosis_change`, `field_value_mismatch`) are recorded, never auto-resolved. Conflicting lab points are excluded from series until the user resolves.
@@ -253,4 +257,6 @@ patient-management/      (shipped Skill)
 
 `scripts/build_skill.py` builds a local ZIP from an explicit public allowlist. No references, patient databases,
 runtime outputs, development constraints or tests are shipped. Keep this source layout intact: schemas and retrieval
-configuration are currently resolved beside src, not from an installed wheel. No public release/license is implied.
+configuration are currently resolved beside src, not from an installed wheel.
+The public project uses Apache License 2.0 (LICENSE); distributing an archive is not evidence of clinical validation.
+Mobile layouts are implemented, but Operit installation and Android service lifecycle have not been verified.

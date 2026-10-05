@@ -11,6 +11,17 @@ anonymizes user material. The dashboard may show fields needed for patient manag
 by their institution's policies and applicable laws and regulations, and remain solely responsible for patient privacy,
 data security and compliance. This project does not assume that responsibility.**
 
+Users must assess whether the chosen agent/model service may process the material under those requirements.
+The project does not replace institutional security, ethics review or data-governance procedures.
+
+## Local persistence is not local-only processing
+
+The host agent may send submitted records to its configured third-party model service even when the final database
+is local. Review the provider's data-use and privacy policies before submission. The engine provides no built-in
+database encryption: protect original files, databases, agent work directories, caches and backups yourself.
+AI analysis, candidate diagnoses, suggestions and knowledge supplements require clinical verification; they are not
+autonomous diagnoses or orders.
+
 ## Minimal disclosure to external search
 
 External evidence search still follows minimal disclosure: search queries contain medical concepts only — never names,
@@ -22,6 +33,15 @@ Validated external evidence never contains patient data.
 The dashboard service listens on `127.0.0.1` by default; a non-loopback address requires an explicit
 `--allow-remote`. The browser never reads SQLite directly; it only receives the Dashboard View Model and HTML rendered
 from it. Data persists in SQLite across browser, agent-session and service restarts.
+
+The web page is available only while the service is running; restart with the same database to restore access.
+Loopback addresses refer to the current device. A phone cannot access a computer's service through the phone's
+127.0.0.1. Mobile layouts do not guarantee mobile-agent installation or background-service persistence.
+
+## Public distribution
+
+Never publish patient records, databases, work packets, runtime outputs, private test material or textbooks.
+Public project files and source policy must remain separate from private patient working data.
 
 ## Images, photos and scanned documents (no OCR here)
 

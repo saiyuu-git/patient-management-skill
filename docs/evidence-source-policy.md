@@ -2,6 +2,8 @@
 
 External medical evidence supports, but never replaces, patient facts. It is retrieved on demand by the host agent, validated by code, and cached locally.
 
+This supports patient-linked analysis and knowledge supplements, not a separate medical-search product or a bundled textbook library. Search capability depends on the host.
+
 ## Source tiers
 
 | Tier | Source types (`source_type`) | Examples |
@@ -18,6 +20,8 @@ External medical evidence supports, but never replaces, patient facts. It is ret
 ## Never acceptable as medical evidence
 
 Forums, Q&A sites, social media, video platforms, encyclopedias, commercial health websites and SEO content (see `disallowed_domains`). Pre-trained model knowledge presented as if retrieved.
+
+Search snippets are for source discovery only. An inaccessible or unverified page is an `unverified_candidate`, not an `ext_*` claim; it cannot enter `external_refs` or support clinical conclusions. The host must access and check the relevant content before declaring `verification=page_accessed`. Code validates this declaration and metadata; it does not independently prove that the claim is supported by the page.
 
 ## What a source must contain
 
