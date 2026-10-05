@@ -1,0 +1,27 @@
+{
+  "_note": "Code assembles search queries from these templates. The model supplies only {concept} and optional qualifiers. {dir} = direction word.",
+  "en": {
+    "lab_interpretation": ["{dir}{concept} causes review", "{dir}{concept} evaluation guideline"],
+    "trend_significance": ["{dir}{concept} clinical significance review", "{concept} change guideline"],
+    "investigation_interpretation": ["{concept} differential diagnosis review", "{concept} imaging guideline"],
+    "candidate_diagnosis": ["{concept} diagnosis guideline", "{concept} diagnostic criteria consensus"],
+    "differential_diagnosis": ["{concept} differential diagnosis review", "{concept} guideline"],
+    "red_flag": ["{concept} red flags guideline", "{concept} warning signs review"],
+    "guideline_standard": ["{concept} guideline", "{concept} consensus statement"]
+  },
+  "zh": {
+    "lab_interpretation": ["{concept}{dir} 原因 综述", "{concept}{dir} 诊治 指南"],
+    "trend_significance": ["{concept}{dir} 临床意义 综述", "{concept} 指南"],
+    "investigation_interpretation": ["{concept} 鉴别诊断 综述", "{concept} 影像 指南"],
+    "candidate_diagnosis": ["{concept} 诊断 指南", "{concept} 诊断标准 专家共识"],
+    "differential_diagnosis": ["{concept} 鉴别诊断", "{concept} 指南"],
+    "red_flag": ["{concept} 危险信号 指南", "{concept} 预警 综述"],
+    "guideline_standard": ["{concept} 指南", "{concept} 专家共识"]
+  },
+  "direction_words": {
+    "en": {"elevated": "elevated ", "low": "low ", "rising": "rising ", "falling": "falling "},
+    "zh": {"elevated": "升高", "low": "降低", "rising": "进行性升高", "falling": "进行性下降"}
+  },
+  "latest_suffix": {"en": "{year}", "zh": "{year} 最新"},
+  "max_queries": 4
+}

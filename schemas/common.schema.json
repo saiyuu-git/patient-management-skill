@@ -1,0 +1,257 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "common.schema.json",
+  "title": "Shared definitions",
+  "description": "IDs, provenance enums, objective trend enums. Referenced by all other schemas.",
+  "$defs": {
+    "schema_version": {
+      "type": "string",
+      "const": "0.6.0"
+    },
+    "fact_id": {
+      "description": "Citable fact ID. Assigned by code only; models may only reference. fact_<kind>_<slug>_<seq>, e.g. fact_lab_cr_001, fact_series_cr.",
+      "type": "string",
+      "pattern": "^fact_[a-z]+(_[a-z0-9]+)+$"
+    },
+    "patient_id": {
+      "type": "string",
+      "pattern": "^pt_[a-z0-9]+$"
+    },
+    "dx_id": {
+      "type": "string",
+      "pattern": "^dx_[0-9]{3,}$"
+    },
+    "task_id": {
+      "type": "string",
+      "pattern": "^task_[0-9]{3,}$"
+    },
+    "source_id": {
+      "type": "string",
+      "pattern": "^src_[0-9]{3,}$"
+    },
+    "evidence_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidence_ref"
+      },
+      "uniqueItems": true,
+      "maxItems": 12
+    },
+    "origin": {
+      "description": "Who asserts it. user_provided = from user material (regardless of how it was extracted); system_computed = deterministic code; model_inferred = model reasoning; ai_suggestion = model-proposed action needing clinician confirmation.",
+      "type": "string",
+      "enum": [
+        "user_provided",
+        "system_computed",
+        "model_inferred",
+        "ai_suggestion"
+      ]
+    },
+    "extracted_by": {
+      "description": "How a user_provided item got into state. Independent of origin.",
+      "type": "string",
+      "enum": [
+        "deterministic_parser",
+        "model",
+        "manual"
+      ]
+    },
+    "date": {
+      "description": "YYYY-MM-DD",
+      "type": "string",
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "datetime": {
+      "description": "ISO 8601; time part optional. Precision recorded in time_precision.",
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}(T[0-9]{2}:[0-9]{2}(:[0-9]{2})?([+-][0-9]{2}:[0-9]{2}|Z)?)?$"
+    },
+    "time_precision": {
+      "type": "string",
+      "enum": [
+        "minute",
+        "day",
+        "unknown"
+      ]
+    },
+    "certainty": {
+      "type": "string",
+      "enum": [
+        "likely",
+        "possible",
+        "uncertain"
+      ]
+    },
+    "abnormal_flag": {
+      "type": "string",
+      "enum": [
+        "normal",
+        "high",
+        "low",
+        "critical_high",
+        "critical_low",
+        "abnormal",
+        "unknown"
+      ]
+    },
+    "data_status": {
+      "description": "Series sufficiency. sufficient = >=2 comparable numeric points.",
+      "type": "string",
+      "enum": [
+        "sufficient",
+        "insufficient",
+        "not_comparable"
+      ]
+    },
+    "direction": {
+      "description": "Objective sign of change at reported precision. No clinical threshold applied.",
+      "type": "string",
+      "enum": [
+        "up",
+        "down",
+        "unchanged"
+      ]
+    },
+    "series_pattern": {
+      "description": "Shape of the whole series. Objective; no clinical threshold.",
+      "type": "string",
+      "enum": [
+        "monotonic_increasing",
+        "monotonic_decreasing",
+        "constant",
+        "non_monotonic"
+      ]
+    },
+    "change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "absolute_change",
+        "percent_change",
+        "direction"
+      ],
+      "properties": {
+        "absolute_change": {
+          "type": "number"
+        },
+        "percent_change": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "description": "null when base value is 0"
+        },
+        "direction": {
+          "$ref": "#/$defs/direction"
+        }
+      }
+    },
+    "clinical_text": {
+      "description": "Plain text. Rendered escaped; never parsed as Markdown/HTML.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "short_text": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "statement": {
+      "description": "Smallest clinical claim: text + patient evidence (+ optional external evidence) + certainty.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "text",
+        "evidence_ids",
+        "certainty"
+      ],
+      "properties": {
+        "text": {
+          "$ref": "#/$defs/clinical_text"
+        },
+        "evidence_ids": {
+          "$ref": "#/$defs/evidence_ids",
+          "minItems": 1
+        },
+        "certainty": {
+          "$ref": "#/$defs/certainty"
+        },
+        "external_refs": {
+          "$ref": "#/$defs/external_refs"
+        }
+      }
+    },
+    "component_state": {
+      "type": "string",
+      "enum": [
+        "ready",
+        "partial",
+        "empty",
+        "loading",
+        "error"
+      ]
+    },
+    "analysis_status": {
+      "type": "string",
+      "enum": [
+        "not_run",
+        "pending",
+        "ready",
+        "partial",
+        "fallback",
+        "failed",
+        "stale"
+      ]
+    },
+    "conflict_id": {
+      "type": "string",
+      "pattern": "^cf_[0-9]{3,}$"
+    },
+    "assertion": {
+      "description": "Decided by explicit source wording, not by the model. absent = negated (无/否认/未见/(-)); uncertain = hedged (考虑/可能/待排/不除外/?); unknown = wording too ambiguous for a reliable deterministic reading.",
+      "type": "string",
+      "enum": [
+        "present",
+        "absent",
+        "uncertain",
+        "unknown"
+      ]
+    },
+    "fact_kind": {
+      "type": "string",
+      "enum": [
+        "chief_complaint",
+        "symptom",
+        "sign",
+        "history",
+        "medication",
+        "treatment",
+        "procedure",
+        "event",
+        "vital",
+        "impression",
+        "other"
+      ],
+      "description": "impression = clinician's hedged/working impression written in the source; never a diagnosis"
+    },
+    "ext_id": {
+      "description": "External medical evidence (web source) ID. Never a patient fact. Global, shared across patients via the evidence cache.",
+      "type": "string",
+      "pattern": "^ext_[a-z0-9]{6,}$"
+    },
+    "external_refs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ext_id"
+      },
+      "uniqueItems": true,
+      "maxItems": 6
+    },
+    "evidence_ref": {
+      "description": "Patient evidence: fact_* id, diagnosis id (dx_*), or explicit task id (task_*, Today Focus only).",
+      "type": "string",
+      "pattern": "^(fact_[a-z]+(_[a-z0-9]+)+|dx_[0-9]{3,}|task_[0-9]{3,})$"
+    }
+  }
+}

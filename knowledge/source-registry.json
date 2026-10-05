@@ -1,0 +1,27 @@
+{
+  "_note": "Authority HINTS, not a whitelist. Unknown but reliable professional bodies remain allowed (tier then comes from the declared source_type). disallowed_domains may never be used as medical evidence.",
+  "organizations": [
+    {"name": "WHO", "domains": ["who.int"], "tier": 1},
+    {"name": "CDC", "domains": ["cdc.gov"], "tier": 1},
+    {"name": "NIH / NCBI Bookshelf", "domains": ["nih.gov"], "tier": 1},
+    {"name": "NICE", "domains": ["nice.org.uk"], "tier": 1},
+    {"name": "AHA/ASA", "domains": ["heart.org", "stroke.org", "ahajournals.org"], "tier": 1},
+    {"name": "ACC", "domains": ["acc.org", "jacc.org"], "tier": 1},
+    {"name": "ESC", "domains": ["escardio.org"], "tier": 1},
+    {"name": "KDIGO", "domains": ["kdigo.org"], "tier": 1},
+    {"name": "IDSA", "domains": ["idsociety.org"], "tier": 1},
+    {"name": "ADA", "domains": ["diabetes.org", "diabetesjournals.org"], "tier": 1},
+    {"name": "ACOG", "domains": ["acog.org"], "tier": 1},
+    {"name": "AAP", "domains": ["aap.org"], "tier": 1},
+    {"name": "国家卫生健康委员会", "domains": ["nhc.gov.cn"], "tier": 1},
+    {"name": "中国疾病预防控制中心", "domains": ["chinacdc.cn"], "tier": 1},
+    {"name": "中华医学会", "domains": ["cma.org.cn"], "tier": 1},
+    {"name": "PubMed", "domains": ["pubmed.ncbi.nlm.nih.gov"], "tier": null, "note": "index; tier follows the article's source_type"},
+    {"name": "Cochrane", "domains": ["cochranelibrary.com", "cochrane.org"], "tier": 2}
+  ],
+  "disallowed_domains": [
+    "zhihu.com", "baike.baidu.com", "tieba.baidu.com", "weibo.com", "douyin.com", "xiaohongshu.com", "toutiao.com",
+    "reddit.com", "quora.com", "facebook.com", "x.com", "twitter.com", "youtube.com", "tiktok.com",
+    "wikipedia.org", "webmd.com", "healthline.com", "verywellhealth.com", "medicalnewstoday.com"
+  ]
+}

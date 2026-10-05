@@ -1,0 +1,581 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "evidence.schema.json",
+  "title": "External medical evidence protocol v0.1",
+  "description": "Engine defines WHAT to search and the SHAPE of results; the host agent performs the web search. External evidence (ext_*) is never a patient fact.",
+  "$defs": {
+    "question_type": {
+      "type": "string",
+      "enum": [
+        "lab_interpretation",
+        "trend_significance",
+        "investigation_interpretation",
+        "candidate_diagnosis",
+        "differential_diagnosis",
+        "red_flag",
+        "guideline_standard"
+      ]
+    },
+    "direction": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "elevated",
+        "low",
+        "rising",
+        "falling",
+        null
+      ]
+    },
+    "recency": {
+      "description": "any = cache ok; recent = only fresh cache; latest = always search again (latest/current guideline).",
+      "type": "string",
+      "enum": [
+        "any",
+        "recent",
+        "latest"
+      ]
+    },
+    "source_type": {
+      "description": "Tier 1: official_guideline, government_health_agency, professional_society_statement, consensus_statement. Tier 2: systematic_review, peer_reviewed_review. Tier 3: original_research. Tier 4: institutional_education.",
+      "type": "string",
+      "enum": [
+        "official_guideline",
+        "government_health_agency",
+        "professional_society_statement",
+        "consensus_statement",
+        "systematic_review",
+        "peer_reviewed_review",
+        "original_research",
+        "institutional_education"
+      ]
+    },
+    "partial_date": {
+      "description": "YYYY, YYYY-MM or YYYY-MM-DD",
+      "type": "string",
+      "pattern": "^[0-9]{4}(-(0[1-9]|1[0-2])(-(0[1-9]|[12][0-9]|3[01]))?)?$"
+    },
+    "request_input": {
+      "description": "What the host agent (or a future analysis module) asks for. The model supplies only a concept and qualifiers; code builds the question and the queries.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "question_type",
+        "concept",
+        "relevant_fact_ids"
+      ],
+      "properties": {
+        "question_type": {
+          "$ref": "#/$defs/question_type"
+        },
+        "concept": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 60,
+          "description": "e.g. serum creatinine / 血肌酐"
+        },
+        "concept_en": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 60,
+          "description": "Optional English form for English queries"
+        },
+        "direction": {
+          "$ref": "#/$defs/direction"
+        },
+        "qualifiers": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 40
+          }
+        },
+        "relevant_fact_ids": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "$ref": "common.schema.json#/$defs/fact_id"
+          }
+        },
+        "recency": {
+          "$ref": "#/$defs/recency"
+        },
+        "max_sources": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "preferred_source_types": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "#/$defs/source_type"
+          }
+        },
+        "force_refresh": {
+          "type": "boolean"
+        },
+        "allow_threshold": {
+          "type": "boolean",
+          "description": "Allow a guideline threshold number in concept/qualifiers. Patient values, dates and record numbers are never allowed."
+        }
+      }
+    },
+    "evidence_request": {
+      "description": "Engine-built request (also embedded in the search package).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "request_id",
+        "patient_id",
+        "clinical_question",
+        "question_type",
+        "patient_context",
+        "relevant_fact_ids",
+        "preferred_source_types",
+        "recency_requirement",
+        "max_sources",
+        "queries",
+        "topic_key",
+        "generated_at"
+      ],
+      "properties": {
+        "request_id": {
+          "type": "string",
+          "pattern": "^evq_[0-9]{3,}$"
+        },
+        "patient_id": {
+          "$ref": "common.schema.json#/$defs/patient_id"
+        },
+        "clinical_question": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "question_type": {
+          "$ref": "#/$defs/question_type"
+        },
+        "concept": {
+          "type": "string"
+        },
+        "patient_context": {
+          "description": "Minimum needed to judge applicability. Never used in search queries. No name, bed, ids of other systems, raw notes.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "age_years",
+            "sex",
+            "relevant_facts"
+          ],
+          "properties": {
+            "age_years": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "sex": {
+              "type": "string",
+              "enum": [
+                "male",
+                "female",
+                "unknown"
+              ]
+            },
+            "relevant_facts": {
+              "type": "array",
+              "maxItems": 8,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "fact_id",
+                  "text"
+                ],
+                "properties": {
+                  "fact_id": {
+                    "$ref": "common.schema.json#/$defs/fact_id"
+                  },
+                  "text": {
+                    "type": "string",
+                    "maxLength": 160
+                  }
+                }
+              }
+            }
+          }
+        },
+        "relevant_fact_ids": {
+          "$ref": "common.schema.json#/$defs/evidence_ids"
+        },
+        "preferred_source_types": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/source_type"
+          }
+        },
+        "recency_requirement": {
+          "$ref": "#/$defs/recency"
+        },
+        "max_sources": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "queries": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "string",
+            "maxLength": 120
+          }
+        },
+        "topic_key": {
+          "type": "string"
+        },
+        "generated_at": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        }
+      }
+    },
+    "evidence_bundle": {
+      "description": "Host agent output after searching. No conclusions outside sources: every medical claim sits inside a source with a URL.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "request_id",
+        "search_status"
+      ],
+      "properties": {
+        "module": {
+          "const": "evidence_bundle"
+        },
+        "request_id": {
+          "type": "string",
+          "pattern": "^evq_[0-9]{3,}$"
+        },
+        "search_status": {
+          "description": "unavailable = host cannot search the web (never answer from memory); no_results = searched, nothing reliable.",
+          "type": "string",
+          "enum": [
+            "ok",
+            "no_results",
+            "unavailable"
+          ]
+        },
+        "search_metadata": {
+          "description": "Optional raw result list returned by the host's search tool (query/url/title), used to cross-check sources.",
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "url"
+            ],
+            "properties": {
+              "query": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "url": {
+                "type": "string"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "$ref": "#/$defs/source"
+          }
+        }
+      }
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "title",
+        "source_type",
+        "url",
+        "accessed_at",
+        "relevant_claims",
+        "verification"
+      ],
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 300
+        },
+        "organization": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 200
+        },
+        "authors": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 300
+        },
+        "source_type": {
+          "$ref": "#/$defs/source_type"
+        },
+        "source_tier": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 4,
+          "description": "Advisory only; code assigns the tier"
+        },
+        "publication_date": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/partial_date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "accessed_at": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "relevant_claims": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "claim"
+            ],
+            "properties": {
+              "claim": {
+                "type": "string",
+                "minLength": 5,
+                "maxLength": 300,
+                "description": "One medical point as the source states it, hedging kept"
+              }
+            }
+          }
+        },
+        "applicability": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 300,
+          "description": "Population/setting the source covers; no patient data"
+        },
+        "limitations": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 300
+        },
+        "verification": {
+          "description": "page_accessed = the host opened the page/document and checked each claim in it. snippet_only = only a search snippet/summary was seen (source discovery only; never evidence).",
+          "type": "string",
+          "enum": [
+            "page_accessed",
+            "snippet_only"
+          ]
+        }
+      }
+    },
+    "evidence_item": {
+      "description": "Stored, validated external source. Global (not patient-scoped); contains no patient data.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "title",
+        "source_type",
+        "source_tier",
+        "tier_basis",
+        "url",
+        "domain",
+        "accessed_at",
+        "relevant_claims",
+        "verified_against_search_metadata",
+        "first_seen_at",
+        "verification"
+      ],
+      "properties": {
+        "evidence_id": {
+          "$ref": "common.schema.json#/$defs/ext_id"
+        },
+        "title": {
+          "type": "string"
+        },
+        "organization": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "authors": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "source_type": {
+          "$ref": "#/$defs/source_type"
+        },
+        "source_tier": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "tier_basis": {
+          "type": "string",
+          "enum": [
+            "registry",
+            "declared"
+          ],
+          "description": "registry = domain matched the source registry"
+        },
+        "publication_date": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/partial_date"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "accessed_at": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "url": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "relevant_claims": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          }
+        },
+        "applicability": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limitations": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "verified_against_search_metadata": {
+          "type": "boolean"
+        },
+        "first_seen_at": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "verification": {
+          "const": "page_accessed"
+        }
+      }
+    },
+    "cache_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "topic_key",
+        "question_type",
+        "concept",
+        "evidence_ids",
+        "retrieved_at",
+        "expires_at",
+        "source_dates",
+        "invalidated",
+        "usage_count"
+      ],
+      "properties": {
+        "topic_key": {
+          "type": "string"
+        },
+        "question_type": {
+          "$ref": "#/$defs/question_type"
+        },
+        "concept": {
+          "type": "string"
+        },
+        "evidence_ids": {
+          "$ref": "common.schema.json#/$defs/external_refs"
+        },
+        "retrieved_at": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "expires_at": {
+          "$ref": "common.schema.json#/$defs/datetime"
+        },
+        "source_dates": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "invalidated": {
+          "type": "boolean"
+        },
+        "usage_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "last_used_at": {
+          "oneOf": [
+            {
+              "$ref": "common.schema.json#/$defs/datetime"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    }
+  }
+}

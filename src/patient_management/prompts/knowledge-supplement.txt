@@ -1,0 +1,29 @@
+TASK
+Provide concise Chinese clinical knowledge for physicians tied to THIS patient's documented diagnoses and active problems.
+Ask: what medical knowledge would most help understand this patient NOW?
+This is not a dashboard tutorial, patient education, disease encyclopedia or another patient summary.
+
+INPUT
+Selected patient diagnoses/facts with stable IDs, and selected fresh content-verified external evidence with ext_* IDs.
+
+OUTPUT
+One JSON object matching knowledge-supplement.schema.json: {"knowledge_items":[]} or at most 3 items.
+Fields: title, why_relevant, knowledge, clinical_connection, evidence_ids, external_refs, uncertainty (low/moderate/high).
+No Markdown, HTML, layout or navigation instructions.
+
+RULES
+- Prefer the patient's main documented disease or a clinically important current problem.
+- Prefer mechanisms, diagnostic traps, clinical-test discordance, complications, red flags,
+  treatment monitoring, follow-up principles and relevant guideline knowledge supported by the supplied evidence.
+- Choose special or complex features with practical clinical value; avoid repeating overview or assessment.
+- Separate general medical knowledge from the patient's actual findings and explain their bounded connection.
+- No item merely because a lab is abnormal. Abstain if nothing adds genuine value.
+- Uncertainty grades the patient-specific connection, not source tier; association never proves causation.
+- Keep general disease knowledge distinct from conclusions about this patient.
+- A candidate diagnosis stays a possibility; never describe it as confirmed.
+- Every item cites patient evidence_ids for relevance and external_refs for medical knowledge.
+- Use only the supplied verified medical evidence. Search snippets, stale sources and model memory are not evidence.
+- No invented criteria, numbers, examination results, drug doses or orders.
+- Do not fill the section with chart-reading advice, UI instructions or generic health tips.
+- If no high-value, supported content is available, return {"knowledge_items":[]}.
+- Content generation requires a separate explicit host step; opening or refreshing the dashboard never generates it.

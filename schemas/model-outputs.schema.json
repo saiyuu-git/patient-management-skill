@@ -1,0 +1,1041 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "model-outputs.schema.json",
+  "title": "Runtime model output protocol v0.2",
+  "description": "The only structures a model may output. One module per call. Top level must be a JSON object; no HTML/CSS/JS/Markdown, layout or styling fields. additionalProperties=false everywhere (extras are stripped). Flat, few fields, small enums, small maxItems.",
+  "$defs": {
+    "module_name": {
+      "type": "string",
+      "enum": [
+        "source_extraction",
+        "patient_summary",
+        "diagnosis_candidates",
+        "lab_interpretation",
+        "investigation_analysis",
+        "problem_list",
+        "clinical_assessment",
+        "today_focus",
+        "task_suggestions",
+        "handover_summary"
+      ]
+    },
+    "module_status": {
+      "description": "insufficient_information is a valid, non-failing answer.",
+      "type": "string",
+      "enum": [
+        "ok",
+        "insufficient_information"
+      ]
+    },
+    "source_extraction": {
+      "description": "Copy what ONE source chunk group literally states. No inference. Every item carries a verbatim quote; code verifies quote within the task's chunks, values/text within the quote, and negation/uncertainty consistency, then assigns IDs and sets origin=user_provided, extracted_by=model.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status"
+      ],
+      "properties": {
+        "module": {
+          "const": "source_extraction"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "source_id": {
+          "$ref": "common.schema.json#/$defs/source_id"
+        },
+        "stated_admission_date": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "date",
+            "quote"
+          ],
+          "properties": {
+            "date": {
+              "$ref": "common.schema.json#/$defs/date"
+            },
+            "quote": {
+              "type": "string",
+              "maxLength": 120
+            }
+          }
+        },
+        "demographics": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "alias": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "bed": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "sex": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "male",
+                "female",
+                "unknown",
+                null
+              ]
+            },
+            "age_text": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Verbatim, e.g. '67岁', '3月龄'; parsed by code"
+            },
+            "quote": {
+              "type": "string",
+              "maxLength": 200
+            }
+          }
+        },
+        "stated_diagnoses": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "text",
+              "quote"
+            ],
+            "properties": {
+              "text": {
+                "type": "string",
+                "maxLength": 120,
+                "description": "Verbatim; do not rewrite"
+              },
+              "quote": {
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        },
+        "facts": {
+          "type": "array",
+          "maxItems": 60,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "text",
+              "quote"
+            ],
+            "properties": {
+              "kind": {
+                "$ref": "common.schema.json#/$defs/fact_kind"
+              },
+              "text": {
+                "type": "string",
+                "maxLength": 200
+              },
+              "observed_at_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "quote": {
+                "type": "string",
+                "maxLength": 300
+              },
+              "assertion": {
+                "$ref": "common.schema.json#/$defs/assertion"
+              }
+            }
+          }
+        },
+        "labs": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "test_name",
+              "raw_value",
+              "quote"
+            ],
+            "properties": {
+              "test_name": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "raw_value": {
+                "type": "string",
+                "maxLength": 30
+              },
+              "raw_unit": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 20
+              },
+              "reference_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 40
+              },
+              "flag_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 10,
+                "description": "Report flag as written: ↑ ↓ H L"
+              },
+              "collected_at_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "quote": {
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        },
+        "investigations": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "findings"
+            ],
+            "properties": {
+              "name": {
+                "type": "string",
+                "maxLength": 60
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "imaging",
+                  "ultrasound",
+                  "ecg",
+                  "endoscopy",
+                  "pathology",
+                  "function_test",
+                  "microbiology",
+                  "other"
+                ]
+              },
+              "performed_at_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "findings": {
+                "type": "array",
+                "maxItems": 15,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "text",
+                    "quote"
+                  ],
+                  "properties": {
+                    "text": {
+                      "type": "string",
+                      "maxLength": 200
+                    },
+                    "quote": {
+                      "type": "string",
+                      "maxLength": 300
+                    }
+                  }
+                }
+              },
+              "impression_quote": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 600
+              }
+            }
+          }
+        },
+        "explicit_tasks": {
+          "type": "array",
+          "maxItems": 30,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "source_kind",
+              "quote"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "maxLength": 80
+              },
+              "source_kind": {
+                "type": "string",
+                "enum": [
+                  "user_plan",
+                  "medical_order",
+                  "progress_note_plan",
+                  "ward_round_plan"
+                ]
+              },
+              "due_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "quote": {
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        },
+        "diagnosis_updates": {
+          "description": "Source text revising/resolving/revoking an existing user diagnosis. Never applied to locked diagnoses; recorded as a conflict for explicit user action.",
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "action",
+              "target_text",
+              "quote"
+            ],
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "revise",
+                  "resolve",
+                  "revoke"
+                ]
+              },
+              "target_text": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "new_text": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 120
+              },
+              "quote": {
+                "type": "string",
+                "maxLength": 200
+              }
+            }
+          }
+        }
+      }
+    },
+    "patient_summary": {
+      "description": "Short overview: basics, main problem, current status, recent change. Not a history.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "one_liner",
+        "key_points"
+      ],
+      "properties": {
+        "module": {
+          "const": "patient_summary"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "one_liner": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": false,
+          "required": [
+            "text",
+            "evidence_ids"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "evidence_ids": {
+              "$ref": "common.schema.json#/$defs/evidence_ids",
+              "minItems": 1
+            }
+          }
+        },
+        "key_points": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "aspect",
+              "text",
+              "evidence_ids",
+              "certainty"
+            ],
+            "properties": {
+              "aspect": {
+                "type": "string",
+                "enum": [
+                  "basic",
+                  "main_problem",
+                  "current_status",
+                  "recent_change"
+                ]
+              },
+              "text": {
+                "$ref": "common.schema.json#/$defs/clinical_text"
+              },
+              "evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              },
+              "external_refs": {
+                "$ref": "common.schema.json#/$defs/external_refs"
+              },
+              "certainty": {
+                "$ref": "common.schema.json#/$defs/certainty"
+              }
+            }
+          }
+        }
+      }
+    },
+    "diagnosis_candidates": {
+      "description": "Always allowed. Input lists locked user diagnoses as read-only context; output only ADDITIONAL candidates (or primary candidates when none provided). Never restate, rewrite or merge a locked diagnosis. Results go to the candidate / pending-review area.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "candidates"
+      ],
+      "properties": {
+        "module": {
+          "const": "diagnosis_candidates"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "candidates": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "display_text",
+              "certainty",
+              "evidence_ids",
+              "rationale"
+            ],
+            "properties": {
+              "display_text": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "certainty": {
+                "$ref": "common.schema.json#/$defs/certainty"
+              },
+              "evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              },
+              "external_refs": {
+                "$ref": "common.schema.json#/$defs/external_refs"
+              },
+              "rationale": {
+                "$ref": "common.schema.json#/$defs/clinical_text"
+              },
+              "against": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 200,
+                "description": "Points against / to exclude"
+              }
+            }
+          }
+        }
+      }
+    },
+    "lab_interpretation": {
+      "description": "Given code-computed values and trends, state what is abnormal, the trend as given, and possible explanations in patient context. Separate fact / association / possible explanation / insufficient evidence. No causal certainty.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "items"
+      ],
+      "properties": {
+        "module": {
+          "const": "lab_interpretation"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "test_id",
+              "abnormality",
+              "trend_comment",
+              "explanations",
+              "change_significance",
+              "evidence_ids",
+              "certainty"
+            ],
+            "properties": {
+              "test_id": {
+                "type": "string",
+                "pattern": "^[a-z0-9_]+$"
+              },
+              "abnormality": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 120,
+                "description": "FACT: what is abnormal now (from given values)"
+              },
+              "trend_comment": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 120,
+                "description": "FACT: restate the given trend; never recompute"
+              },
+              "explanations": {
+                "type": "array",
+                "maxItems": 3,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "kind",
+                    "text",
+                    "evidence_ids",
+                    "certainty"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "association",
+                        "possible_explanation",
+                        "insufficient_evidence"
+                      ]
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 2,
+                      "maxLength": 150
+                    },
+                    "evidence_ids": {
+                      "$ref": "common.schema.json#/$defs/evidence_ids",
+                      "minItems": 1
+                    },
+                    "external_refs": {
+                      "$ref": "common.schema.json#/$defs/external_refs"
+                    },
+                    "certainty": {
+                      "$ref": "common.schema.json#/$defs/certainty"
+                    }
+                  }
+                }
+              },
+              "clinical_significance": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 160
+              },
+              "change_significance": {
+                "type": "string",
+                "enum": [
+                  "meaningful",
+                  "not_meaningful",
+                  "uncertain"
+                ]
+              },
+              "uncertainty": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150
+              },
+              "evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              },
+              "external_refs": {
+                "$ref": "common.schema.json#/$defs/external_refs"
+              },
+              "certainty": {
+                "$ref": "common.schema.json#/$defs/certainty"
+              }
+            }
+          }
+        }
+      }
+    },
+    "investigation_analysis": {
+      "description": "Significance of extracted findings only; never infer results from the examination name.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "items"
+      ],
+      "properties": {
+        "module": {
+          "const": "investigation_analysis"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "investigation_id",
+              "key_significance",
+              "evidence_ids",
+              "certainty"
+            ],
+            "properties": {
+              "investigation_id": {
+                "$ref": "common.schema.json#/$defs/fact_id"
+              },
+              "key_significance": {
+                "$ref": "common.schema.json#/$defs/clinical_text"
+              },
+              "relation_to_problems": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150
+              },
+              "compared_with_previous": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150
+              },
+              "uncertainty": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150
+              },
+              "evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              },
+              "external_refs": {
+                "$ref": "common.schema.json#/$defs/external_refs"
+              },
+              "certainty": {
+                "$ref": "common.schema.json#/$defs/certainty"
+              }
+            }
+          }
+        }
+      }
+    },
+    "problem_list": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "problems"
+      ],
+      "properties": {
+        "module": {
+          "const": "problem_list"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "problems": {
+          "type": "array",
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "current_status",
+              "supporting_evidence_ids",
+              "assessment",
+              "certainty"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              },
+              "linked_diagnosis_id": {
+                "oneOf": [
+                  {
+                    "$ref": "common.schema.json#/$defs/dx_id"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "current_status": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "improving",
+                  "worsening",
+                  "stable",
+                  "resolved",
+                  "unclear"
+                ]
+              },
+              "supporting_evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              },
+              "recent_change": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150
+              },
+              "assessment": {
+                "$ref": "common.schema.json#/$defs/clinical_text"
+              },
+              "uncertainty": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150,
+                "description": "Required when certainty != likely"
+              },
+              "attention": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "maxLength": 150,
+                "description": "What to watch; not an order"
+              },
+              "external_refs": {
+                "$ref": "common.schema.json#/$defs/external_refs"
+              },
+              "certainty": {
+                "$ref": "common.schema.json#/$defs/certainty"
+              }
+            }
+          }
+        }
+      }
+    },
+    "clinical_assessment": {
+      "description": "Bounded overall assessment of the current active problems. Not an essay.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "overall_trend",
+        "composition"
+      ],
+      "properties": {
+        "module": {
+          "const": "clinical_assessment"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "overall_trend": {
+          "type": "string",
+          "enum": [
+            "improving",
+            "stable",
+            "worsening",
+            "mixed",
+            "unclear"
+          ]
+        },
+        "composition": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "improving": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "still_abnormal": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "watch": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "uncertainties": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "string",
+            "maxLength": 100
+          }
+        }
+      }
+    },
+    "task_suggestions": {
+      "description": "Stored as ai_suggestion, pending user confirmation. No doses, no order-style wording.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "suggestions"
+      ],
+      "properties": {
+        "module": {
+          "const": "task_suggestions"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "suggestions": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "title",
+              "rationale",
+              "evidence_ids",
+              "priority"
+            ],
+            "properties": {
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 60
+              },
+              "rationale": {
+                "type": "string",
+                "maxLength": 150
+              },
+              "evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "normal",
+                  "low"
+                ]
+              },
+              "external_refs": {
+                "$ref": "common.schema.json#/$defs/external_refs"
+              }
+            }
+          }
+        }
+      }
+    },
+    "handover_summary": {
+      "description": "Fixed handover structure for quick mobile reading. Do not copy notes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "opening",
+        "key_history",
+        "key_findings",
+        "current_status",
+        "major_problems",
+        "today_focus"
+      ],
+      "properties": {
+        "module": {
+          "const": "handover_summary"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "opening": {
+          "type": "array",
+          "maxItems": 1,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "key_history": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "key_findings": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "current_status": {
+          "type": "array",
+          "maxItems": 2,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "major_problems": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        },
+        "today_focus": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "$ref": "common.schema.json#/$defs/statement"
+          }
+        }
+      }
+    },
+    "today_focus": {
+      "description": "Pick and phrase at most 3 of the code-generated focus candidates, most important first. Never invent a candidate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "module",
+        "status",
+        "items"
+      ],
+      "properties": {
+        "module": {
+          "const": "today_focus"
+        },
+        "status": {
+          "$ref": "#/$defs/module_status"
+        },
+        "items": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "candidate_id",
+              "text",
+              "evidence_ids"
+            ],
+            "properties": {
+              "candidate_id": {
+                "type": "string",
+                "pattern": "^fc_[0-9]{2}$"
+              },
+              "text": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 80
+              },
+              "evidence_ids": {
+                "$ref": "common.schema.json#/$defs/evidence_ids",
+                "minItems": 1
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

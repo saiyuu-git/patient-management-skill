@@ -1,0 +1,53 @@
+TASK
+Copy into JSON what the SOURCE literally states about the patient. Do not interpret, infer, summarize, diagnose, or advise.
+
+OUTPUT
+Exactly one JSON object. No Markdown, no code fences, no text before or after it.
+
+RULES
+1. Extract only what is explicitly written. If unsure, leave it out. Empty arrays are correct when nothing applies.
+2. Every item needs "quote": the exact source words it comes from (copy, do not retype; max 200 characters).
+3. Copy wording verbatim. Never rename, abbreviate, translate, correct, standardize, or add codes.
+4. Every number, unit and date you output must appear in that item's quote exactly as written.
+5. Keep negation and uncertainty words inside "text" (无, 否认, 未见, (-), 考虑, 可能, 待排, 不除外, ?).
+   Set "assertion" from those words only: "absent" (negated), "uncertain" (hedged), "present" (plainly stated),
+   "unknown" if the wording is ambiguous. Never make a statement more or less certain than the source.
+6. "stated_diagnoses": only items of an explicit diagnosis list (入院诊断, 初步诊断, 目前诊断, 出院诊断, 诊断 ...)
+   or a plain statement that the patient has the disease. Hedged items (考虑…, …可能, 待排, 不除外, ?) are NOT
+   diagnoses: put them in "facts" with "kind": "impression" and "assertion": "uncertain".
+   Never take items from 鉴别诊断 or 诊断依据.
+7. "diagnosis_updates": only when the source explicitly revises, resolves or revokes a diagnosis listed in CONTEXT.
+8. "explicit_tasks": only plans or orders that are written (计划, 拟, 予, 医嘱, 复查 ...). Never invent tasks.
+9. "stated_admission_date": only if the source writes 入院日期/入院时间 or "<date>入院". Never use a note's own date.
+10. Do not extract labs from lines listed under ALREADY CAPTURED.
+11. Times ("collected_at_text", "performed_at_text", "observed_at_text", "due_text") must be copied from the source,
+    otherwise null. Never compute or guess a date.
+12. Use only the English enum values listed under FIELDS.
+
+FIELDS
+{"module": "source_extraction",
+ "status": "ok" | "insufficient_information",
+ "demographics": null | {"name": str|null, "alias": str|null, "bed": str|null, "sex": "male"|"female"|null, "age_text": str|null, "quote": str},
+ "stated_admission_date": null | {"date": "YYYY-MM-DD", "quote": str},
+ "stated_diagnoses": [{"text": str, "quote": str}],
+ "diagnosis_updates": [{"action": "revise"|"resolve"|"revoke", "target_text": str, "new_text": str|null, "quote": str}],
+ "facts": [{"kind": KIND, "text": str, "assertion": "present"|"absent"|"uncertain"|"unknown", "observed_at_text": str|null, "quote": str}],
+ "labs": [{"test_name": str, "raw_value": str, "raw_unit": str|null, "reference_text": str|null, "flag_text": str|null, "collected_at_text": str|null, "quote": str}],
+ "investigations": [{"name": str, "category": CATEGORY, "body_site": str|null, "performed_at_text": str|null, "findings": [{"text": str, "quote": str}], "impression_quote": str|null}],
+ "explicit_tasks": [{"title": str, "source_kind": SOURCE_KIND, "due_text": str|null, "quote": str}]}
+KIND: chief_complaint symptom sign history medication treatment procedure event vital impression other
+CATEGORY: imaging ultrasound ecg endoscopy pathology function_test microbiology other
+SOURCE_KIND: user_plan medical_order progress_note_plan ward_round_plan
+
+EXAMPLE
+SOURCE: 患者无发热，咳嗽2天。考虑上呼吸道感染可能。计划：复查血常规。
+OUTPUT: {"module": "source_extraction", "status": "ok", "demographics": null, "stated_admission_date": null, "stated_diagnoses": [], "diagnosis_updates": [], "facts": [{"kind": "symptom", "text": "无发热", "assertion": "absent", "observed_at_text": null, "quote": "患者无发热"}, {"kind": "symptom", "text": "咳嗽2天", "assertion": "present", "observed_at_text": null, "quote": "咳嗽2天"}, {"kind": "impression", "text": "考虑上呼吸道感染可能", "assertion": "uncertain", "observed_at_text": null, "quote": "考虑上呼吸道感染可能"}], "labs": [], "investigations": [], "explicit_tasks": [{"title": "复查血常规", "source_kind": "progress_note_plan", "due_text": null, "quote": "计划：复查血常规"}]}
+
+CONTEXT
+$context
+
+ALREADY CAPTURED (do not extract labs from these lines)
+$already
+$repair
+SOURCE (type: $source_kind)
+$source

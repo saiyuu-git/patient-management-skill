@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dashboard-view.schema.json",
+  "title": "Dashboard view v0.1",
+  "description": "The only structure the fixed frontend reads. Keys and order are fixed; Chinese titles and copy are code-owned. Presentation localizes technical enums without rewriting source facts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "view_version",
+    "patient_id",
+    "generated_at",
+    "index_date",
+    "order",
+    "copy",
+    "modules",
+    "presentation"
+  ],
+  "properties": {
+    "presentation": {
+      "const": {
+        "sections": ["overview", "examinations", "tasks", "knowledge"],
+        "overview": ["diagnoses", "clinical_assessment", "handover"],
+        "examinations": ["lab_trends", "investigations"]
+      },
+      "description": "Vertically stacked sections with shared side navigation. Background transfusion screens and uninterpretable noncritical labs are hidden unless explicitly requested. Task source labels distinguish user plans and AI suggestions. Knowledge uses one fixed accent; samples never enter real patient evidence."
+    },
+    "view_version": {
+      "const": "0.1"
+    },
+    "patient_id": {
+      "$ref": "common.schema.json#/$defs/patient_id"
+    },
+    "generated_at": {
+      "$ref": "common.schema.json#/$defs/datetime"
+    },
+    "index_date": {
+      "$ref": "common.schema.json#/$defs/date"
+    },
+    "order": {
+      "const": [
+        "header",
+        "overview",
+        "diagnoses",
+        "today_focus",
+        "tasks",
+        "lab_trends",
+        "lab_interpretations",
+        "investigations",
+        "clinical_assessment",
+        "problem_list",
+        "handover",
+        "knowledge"
+      ]
+    },
+    "copy": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "modules": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "header",
+        "overview",
+        "diagnoses",
+        "today_focus",
+        "tasks",
+        "lab_trends",
+        "lab_interpretations",
+        "investigations",
+        "clinical_assessment",
+        "problem_list",
+        "handover",
+        "knowledge"
+      ],
+      "properties": {
+        "header": {
+          "$ref": "#/$defs/module"
+        },
+        "overview": {
+          "$ref": "#/$defs/module"
+        },
+        "diagnoses": {
+          "$ref": "#/$defs/module"
+        },
+        "today_focus": {
+          "$ref": "#/$defs/module"
+        },
+        "tasks": {
+          "$ref": "#/$defs/module"
+        },
+        "lab_trends": {
+          "$ref": "#/$defs/module"
+        },
+        "lab_interpretations": {
+          "$ref": "#/$defs/module"
+        },
+        "investigations": {
+          "$ref": "#/$defs/module"
+        },
+        "clinical_assessment": {
+          "$ref": "#/$defs/module"
+        },
+        "problem_list": {
+          "$ref": "#/$defs/module"
+        },
+        "handover": {
+          "$ref": "#/$defs/module"
+        },
+        "knowledge": {
+          "$ref": "#/$defs/module"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "module": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "key",
+        "title",
+        "state",
+        "message",
+        "data"
+      ],
+      "properties": {
+        "key": {
+          "type": "string",
+          "enum": [
+            "header",
+            "overview",
+            "diagnoses",
+            "today_focus",
+            "tasks",
+            "lab_trends",
+            "lab_interpretations",
+            "investigations",
+            "clinical_assessment",
+            "problem_list",
+            "handover",
+            "knowledge"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "state": {
+          "$ref": "common.schema.json#/$defs/component_state"
+        },
+        "message": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Fixed UI copy from code (never model text)"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "comparison": {
+              "type": "object",
+              "required": ["status", "baseline_date", "basis"],
+              "properties": {
+                "status": {"enum": ["available", "unavailable"]},
+                "baseline_date": {"type": ["string", "null"]},
+                "basis": {"enum": ["previous_day", "previous_version", "none"]}
+              },
+              "description": "Audit-backed comparison only. New/updated marks do not imply clinical onset or deterioration."
+            }
+          },
+          "description": "Display items may include change=new|updated|null and priority_rank (derived from existing problem order/critical flags, never new reasoning)."
+        }
+      }
+    }
+  }
+}

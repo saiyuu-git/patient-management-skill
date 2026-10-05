@@ -1,0 +1,44 @@
+TASK
+Search the web for evidence that answers ONE clinical question, then report the sources as JSON.
+Request: $request_id
+Question: $question
+
+HOW TO SEARCH
+- Use these queries (or very close equivalents). Never add the patient's name, dates, record ids or lab values to a query:
+$queries
+- Prefer, in order: official guidelines, government health agencies, national/international professional societies,
+  consensus statements (Tier 1); systematic or authoritative reviews in peer-reviewed journals (Tier 2);
+  peer-reviewed original research (Tier 3); reliable medical institution education pages (Tier 4).
+- Preferred source types for this request: $preferred
+- Known authoritative bodies (hints, not a closed list): $hints
+- Never use: forums, social media, Q&A sites, encyclopedias, commercial health sites, SEO content ($disallowed).
+- Recency: $recency ("latest" = the newest guideline or consensus; check publication dates).
+- At most $max_sources sources. Fewer high-quality sources are better than many.
+
+IF YOU CANNOT SEARCH
+If you have no web access or the search fails, return {"module": "evidence_bundle", "request_id": "$request_id", "search_status": "unavailable"}.
+Never answer from memory or pretend you searched. If you searched but found nothing reliable, use "no_results".
+
+WHAT TO REPORT
+- Exactly one JSON object; no Markdown, no prose, no overall answer or summary.
+- Copy title, organization/authors, URL and publication date exactly as shown by the source.
+- "relevant_claims": 1-5 short claims, each ONE medical point as the source states it. Keep its hedging (may, often, suggests).
+  No claim without its source. Do not mention this patient in claims.
+- "applicability": which population/setting the source covers. "limitations": what it does not cover.
+- If your search tool returned a result list, copy it into "search_metadata" (query, url, title).
+- "verification": "page_accessed" ONLY if you opened the page/document and found each claim in it.
+  If you only saw a search snippet or summary, or the page was blocked (403/paywall), use "snippet_only":
+  such sources are recorded for discovery only and are never used as medical evidence.
+
+FIELDS
+{"module": "evidence_bundle", "request_id": "$request_id", "search_status": "ok"|"no_results"|"unavailable",
+ "search_metadata": [{"query": str, "url": str, "title": str}],
+ "sources": [{"title": str, "organization": str|null, "authors": str|null,
+   "source_type": "official_guideline"|"government_health_agency"|"professional_society_statement"|"consensus_statement"|"systematic_review"|"peer_reviewed_review"|"original_research"|"institutional_education",
+   "publication_date": "YYYY"|"YYYY-MM"|"YYYY-MM-DD"|null, "accessed_at": "YYYY-MM-DDTHH:MM",
+   "url": str, "verification": "page_accessed"|"snippet_only",
+   "relevant_claims": [{"claim": str}], "applicability": str|null, "limitations": str|null}]}
+
+PATIENT CONTEXT (for judging applicability only; never put it into queries or claims)
+$context
+$repair

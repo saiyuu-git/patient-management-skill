@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "task-completion-request.schema.json",
+  "title": "Explicit user task completion",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["task_id", "completed"],
+  "properties": {
+    "task_id": {"$ref": "common.schema.json#/$defs/task_id"},
+    "completed": {"type": "boolean"}
+  },
+  "description": "User checkbox action only. Checked completes an explicit task; unchecked reopens it. AI suggestions and cancelled tasks are excluded."
+}
